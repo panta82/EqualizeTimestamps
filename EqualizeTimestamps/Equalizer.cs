@@ -19,9 +19,24 @@ namespace EqualizeTimestamps {
 
 		private void Equalize(FileSystemInfo sourceEntry, FileSystemInfo targetEntry) {
 			Logger.Log(targetEntry.FullName);
-			targetEntry.CreationTime = sourceEntry.CreationTime;
-			targetEntry.LastAccessTime = sourceEntry.LastAccessTime;
-			targetEntry.LastWriteTime = sourceEntry.LastWriteTime;
+			var restoreReadOnly = false;
+
+			if ((targetEntry.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly) {
+				// Remove flag, mess with the file, then restore
+				targetEntry.Attributes = targetEntry.Attributes & (~FileAttributes.ReadOnly);
+				restoreReadOnly = true;
+			}
+
+			try {
+				targetEntry.CreationTime = sourceEntry.CreationTime;
+				targetEntry.LastAccessTime = sourceEntry.LastAccessTime;
+				targetEntry.LastWriteTime = sourceEntry.LastWriteTime;
+			}
+			finally {
+				if (restoreReadOnly) {
+					targetEntry.Attributes = targetEntry.Attributes | FileAttributes.ReadOnly;
+				}
+			}
 		}
 
 		public void Run() {
