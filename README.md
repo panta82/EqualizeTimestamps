@@ -4,6 +4,8 @@ Command line utility to equalize timestamps (created date, last access date, las
 
 Just a little personal itch-scratching thing.
 
+Windows only, sorry.
+
 ### Usage
 
 ```
