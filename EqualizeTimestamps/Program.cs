@@ -13,20 +13,15 @@ namespace EqualizeTimestamps {
 		[Value(1, HelpText = "Target directory", MetaName = "target", Required = true)]
 		public string Target { get; set; }
 
-		[Option('s', "silent", Default = false, HelpText = "Silence output")]
-		public bool Silent { get; set; }
+		[Option('v', "verbose", Default = false, HelpText = "Verbose output")]
+		public bool Verbose { get; set; }
 	}
 
 	class Program {
 		static void Main(string[] args) {
 			Parser.Default.ParseArguments<Options>(args)
 				.WithParsed(options => {
-					ILogger logger;
-					if (options.Silent) {
-						logger = new SilentLogger();
-					} else {
-						logger = new ConsoleLogger();
-					}
+					var logger = new Logger(options.Verbose ? LoggerLevel.Verbose : LoggerLevel.Info);
 					new Equalizer(options.Source, options.Target, logger).Run();
 				});
 		}

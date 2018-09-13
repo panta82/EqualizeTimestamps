@@ -1,32 +1,45 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EqualizeTimestamps {
-	public interface ILogger {
-		int Depth { get; set; }
-		void Log(string message);
+	public enum LoggerLevel {
+		Error = 0,
+		Info = 1,
+		Verbose = 2,
 	}
 
-	public class ConsoleLogger : ILogger {
+	public class Logger {
+		public LoggerLevel Level { get; set; }
 		public int Depth { get; set; }
-		public void Log(string message) {
+
+		public Logger(LoggerLevel level) {
+			this.Level = level;
+			this.Depth = 0;
+		}
+
+		private void DoLog(string message) {
 			var depthPrefix = new String(' ', Depth * 2);
 			Console.WriteLine("[{0}] {1}{2}",
 				DateTimeOffset.Now.ToString("s", CultureInfo.InvariantCulture),
 				depthPrefix,
 				message);
 		}
-	}
 
-	public class SilentLogger : ILogger {
-		public int Depth { get; set; }
+		public void Verbose(string message) {
+			if (Level >= LoggerLevel.Verbose) {
+				this.DoLog(message);
+			}
+		}
 
-		public void Log(string message) {
-			// Nothing
+		public void Info(string message) {
+			if (Level >= LoggerLevel.Info) {
+				this.DoLog(message);
+			}
+		}
+
+		public void Error(Exception ex) {
+			Console.WriteLine(ex.Message);
+			Console.WriteLine(ex.StackTrace);
 		}
 	}
 }

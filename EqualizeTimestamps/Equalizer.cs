@@ -9,37 +9,44 @@ namespace EqualizeTimestamps {
 	public class Equalizer {
 		private string Source { get; set; }
 		private string Target { get; set; }
-		private ILogger Logger { get; set; }
+		private Logger Logger { get; set; }
 
-		public Equalizer(string source, string target, ILogger logger) {
+		public Equalizer(string source, string target, Logger logger) {
 			this.Source = source;
 			this.Target = target;
-			this.Logger = logger ?? new SilentLogger();
+			this.Logger = logger;
 		}
 
 		private void Equalize(FileSystemInfo sourceEntry, FileSystemInfo targetEntry) {
-			Logger.Log(targetEntry.FullName);
-			var restoreReadOnly = false;
-
-			if ((targetEntry.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly) {
-				// Remove flag, mess with the file, then restore
-				targetEntry.Attributes = targetEntry.Attributes & (~FileAttributes.ReadOnly);
-				restoreReadOnly = true;
-			}
-
+			Logger.Verbose(targetEntry.FullName);
 			try {
-				targetEntry.CreationTime = sourceEntry.CreationTime;
-				targetEntry.LastAccessTime = sourceEntry.LastAccessTime;
-				targetEntry.LastWriteTime = sourceEntry.LastWriteTime;
-			}
-			finally {
-				if (restoreReadOnly) {
-					targetEntry.Attributes = targetEntry.Attributes | FileAttributes.ReadOnly;
+				var restoreReadOnly = false;
+
+				if ((targetEntry.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly) {
+					// Remove flag, mess with the file, then restore
+					targetEntry.Attributes = targetEntry.Attributes & (~FileAttributes.ReadOnly);
+					restoreReadOnly = true;
 				}
+
+				try {
+					targetEntry.CreationTime = sourceEntry.CreationTime;
+					targetEntry.LastAccessTime = sourceEntry.LastAccessTime;
+					targetEntry.LastWriteTime = sourceEntry.LastWriteTime;
+				}
+				finally {
+					if (restoreReadOnly) {
+						targetEntry.Attributes = targetEntry.Attributes | FileAttributes.ReadOnly;
+					}
+				}
+			}
+			catch (Exception ex) {
+				Logger.Error(ex);
 			}
 		}
 
 		public void Run() {
+			Logger.Info("[" + this.Target + "]");
+
 			var sourceDir = new DirectoryInfo(this.Source);
 			if (!sourceDir.Exists) {
 				throw new Exception($"Source directory doesn't exist: ${this.Source}");
@@ -69,7 +76,12 @@ namespace EqualizeTimestamps {
 					// Recurse into directories
 					// TODO: If too deep for stack, add to a queue, then consume later
 					Logger.Depth++;
-					new Equalizer(sourceEntry.FullName, targetEntry.FullName, Logger).Run();
+					try {
+						new Equalizer(sourceEntry.FullName, targetEntry.FullName, Logger).Run();
+					}
+					catch (Exception ex) {
+						Logger.Error(ex);
+					}
 					Logger.Depth--;
 				} else if (!sourceIsDir && !targetIsDir) {
 					// If neither is dir, equalize dates
